@@ -17,27 +17,36 @@ func init() {
 	ganyu()
 	xiangling()
 	xingqiu()
+	fischl()
+	bennett(true)
+	ningguang(true)
+
+	//hp scalers
+	kokomi()
+	nilou()
+	zhongli()
+	layla()
+
+	//supports
+	kazuha()
+	venti()
+	jean()
+	// don't have enough vv pieces to go around rip
+	sucrose()
+	shenhe(true) //also force NO cause she's used for others too sometimes
+
+	itto()
+	noelle()
+	gorou()
 
 	//todo list (no particular order)
-	// - ayaka
-	// - ganyu
-	// - shenhe
-	// - nilou
 	// - itto
-	// - kazuha
-	// - fischl
+	// - noelle
 
-	// - bennett
-	// - jean
 	// - keqing
 	// - tighnari
-	// - kokomi
-	// - ningguang
-	// - sucrose
 	// - layla
-	// - venti
 	// - mona
-	// - noelle
 	// - kuki (hb)
 	// maybes?? i never use??
 	// - beidou
@@ -256,7 +265,7 @@ func yelan(mustNO bool) {
 			SlotMax(2, good.Sands, good.Goblet, good.Circlet).
 			Build(),
 		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
-			if mustNO && s.SetBonus == good.NoblesseOblige {
+			if mustNO && s.SetBonus != good.NoblesseOblige {
 				return false
 			}
 			switch t.Weapon.Key {
@@ -465,22 +474,434 @@ func ganyu() {
 	}
 }
 
-func skeleton() {
-	priority = append(priority, good.Yelan)
-	config[good.Yelan] = &OptimizeTarget{
+func shenhe(mustNO bool) {
+	//ill just use whatever shizuka uses here; optimize ayaka's damage instead
+	priority = append(priority, good.Shenhe)
+	config[good.Shenhe] = &OptimizeTarget{
 		Filter: NewFilter().
-			Sands(good.HPP).
-			Goblet(good.HydroP, good.HPP).
-			Circlet(good.CR, good.CD).
-			Skip(good.ATKP, good.DEFP).
-			Max(1).
-			SlotMax(2, good.Sands, good.Goblet, good.Circlet).
+			Sands(good.ER, good.ATKP).
+			Goblet(good.ATKP).
+			Circlet(good.ATKP).
 			Build(),
 		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
-			return false
+			if mustNO && s.SetBonus != good.NoblesseOblige {
+				return false
+			}
+			//skip vv i already don't have enough
+			for _, a := range s.Build {
+				if a.SetKey == good.ViridescentVenerer {
+					return false
+				}
+			}
+			switch s.SetBonus {
+			case good.NoblesseOblige:
+				s.Add(good.ATKP, .20)
+			}
+			return s.Get(good.ER) >= 2.20
 		},
 		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
-			return 0
+			ayaka, ok := optimized[good.KamisatoAyaka]
+			if !ok {
+				return 0
+			}
+
+			// A1: Deific Embrace
+			ayaka.Add(good.CryoP, .15)
+			// A4: Spirit Communion Seal
+			ayaka.BurstDMG += .10
+
+			if s.SetBonus == good.NoblesseOblige {
+				ayaka.Add(good.ATKP, .20)
+			}
+
+			// Icy Quill
+			flatdmg := s.TotalATK() * .776
+
+			// Cutting DMG
+			dmg := (ayaka.TotalATK() * 1.909) + flatdmg
+			dmg *= 1 + ayaka.AllDMG + ayaka.BurstDMG + ayaka.Get(good.CryoP)
+			dmg *= ayaka.CritAverage(0, 0)
+			return dmg
+		},
+	}
+}
+
+func zhongli() {
+	priority = append(priority, good.Zhongli)
+	config[good.Zhongli] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.HPP).
+			Goblet(good.HPP).
+			Circlet(good.HPP).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			count := 0
+			for _, v := range s.Build {
+				if v.SetKey == good.TenacityOfTheMillelith {
+					count++
+				}
+			}
+			return count <= 4
+			// return s.SetBonus == good.TenacityOfTheMillelith
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.TotalHP()
+		},
+	}
+}
+
+func layla() {
+	priority = append(priority, good.Layla)
+	config[good.Layla] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.HPP).
+			Goblet(good.HPP).
+			Circlet(good.HPP).
+			Skip(good.DEFP).Max(1).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.ER) >= 1.60 && s.SetBonus == good.TenacityOfTheMillelith
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.TotalHP()
+		},
+	}
+}
+
+func nilou() {
+	priority = append(priority, good.Nilou)
+	config[good.Nilou] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.HPP).
+			Goblet(good.HPP).
+			Circlet(good.HPP).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			// A1: Court of Dancing Petals
+			s.Add(good.EM, 100)
+			// Elemental Resonance: Soothing Water
+			s.Add(good.HPP, .25)
+			switch t.Weapon.Key {
+			case good.KeyOfKhajNisut:
+				hp := s.TotalHP()
+				s.Add(good.EM, hp*.0012*3)
+				s.Add(good.EM, hp*.002)
+			case good.IronSting:
+				//actually all damage but this is fine
+				s.Add(good.DendroP, 0.06*2) //rank 1
+			}
+			count := 0
+			for _, v := range s.Build {
+				if v.SetKey == good.TenacityOfTheMillelith {
+					count++
+				}
+			}
+			return count <= 2
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			// A4: Dreamy Dance of Aeons
+			a4 := max(0, s.TotalHP()-30000)
+			a4 = min(a4*.001*.09, 4)
+
+			// Bloom DMG
+			em := s.Get(good.EM)
+			bloom := 1446.9 * (1 + (16*em)/(2000+em) + a4) * 2
+			bloom *= enemyMult(0, 0, 1)
+			return bloom
+		},
+	}
+}
+
+func kokomi() {
+	priority = append(priority, good.SangonomiyaKokomi)
+	config[good.SangonomiyaKokomi] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.HPP).
+			Goblet(good.HPP).
+			Circlet(good.HPP).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			s.Add(good.CR, -1)
+			s.Add(good.Heal, .25)
+			return s.SetBonus == good.FlowerOfParadiseLost
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			// Bloom DMG
+			em := s.Get(good.EM)
+			bloom := 1446.9 * (1 + (16*em)/(2000+em)) * 2
+			bloom *= enemyMult(0, 0, 1)
+			return bloom
+		},
+	}
+}
+
+func fischl() {
+	priority = append(priority, good.Fischl)
+	config[good.Fischl] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP).
+			Goblet(good.ElectroP, good.ATKP).
+			Circlet(good.CR, good.CD).
+			Skip(good.HPP, good.DEFP, good.ER).
+			Max(2).SlotMax(3, good.Sands, good.Goblet, good.Circlet).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			switch s.SetBonus {
+			case good.GoldenTroupe:
+				s.SkillDMG += .25
+			}
+			return true
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			em := s.Get(good.EM)
+			agg := 1446.9 * (1 + (5*em)/(1200+em)) * 1.15
+
+			// Oz's ATK DMG
+			dmg := s.TotalATK() * 1.776
+			dmg = dmg*2 + (dmg + agg)
+			dmg *= 1 + s.AllDMG + s.SkillDMG + s.Get(good.ElectroP)
+			dmg *= s.CritAverage(s.SkillCR, 0)
+			return dmg
+		},
+	}
+}
+
+func ningguang(mustNO bool) {
+	priority = append(priority, good.Ningguang)
+	config[good.Ningguang] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP).
+			Goblet(good.GeoP, good.ATKP).
+			Circlet(good.CR, good.CD).
+			Skip(good.HPP, good.DEFP).
+			Max(2).SlotMax(3, good.Sands, good.Goblet, good.Circlet).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			if mustNO && s.SetBonus != good.NoblesseOblige {
+				return false
+			}
+			switch s.SetBonus {
+			case good.NoblesseOblige:
+				s.Add(good.ATKP, .20)
+			}
+			return true
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			dmg := s.TotalATK()
+			dmg *= 1 + s.AllDMG + s.BurstDMG + s.Get(good.GeoP)
+			dmg *= s.CritAverage(0, 0)
+			dmg *= 1.4783200025558472 //t9 single shard
+			return dmg
+		},
+	}
+}
+
+func bennett(mustNO bool) {
+	priority = append(priority, good.Bennett)
+	config[good.Bennett] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP).
+			Goblet(good.PyroP, good.ATKP).
+			Circlet(good.CR, good.CD).
+			Skip(good.HPP, good.DEFP).
+			Max(2).SlotMax(3, good.Sands, good.Goblet, good.Circlet).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			if mustNO && s.SetBonus != good.NoblesseOblige {
+				return false
+			}
+			switch t.Weapon.Key {
+			case good.SkyriderSword:
+				s.Add(good.CR, 0.04)
+			}
+			switch s.SetBonus {
+			case good.NoblesseOblige:
+				s.Add(good.ATKP, .20)
+			}
+			return true
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			dmg := s.TotalATK()
+			dmg *= 1 + s.AllDMG + s.BurstDMG + s.Get(good.PyroP)
+			dmg *= s.CritAverage(0, 0)
+			dmg *= 2.339200019836426 //t9 skill press
+			return dmg
+		},
+	}
+}
+
+func venti() {
+	priority = append(priority, good.Venti)
+	config[good.Venti] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.EM, good.ER).
+			Goblet(good.EM).
+			Circlet(good.EM, good.CR).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.ER) >= 2.50 && s.Get(good.CR) >= 0.3 && s.SetBonus == good.ViridescentVenerer
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.Get(good.EM)
+		},
+	}
+}
+
+func kazuha() {
+	priority = append(priority, good.KaedeharaKazuha)
+	config[good.KaedeharaKazuha] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.EM, good.ER).
+			Goblet(good.EM).
+			Circlet(good.EM).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.ER) >= 1.70 && s.Get(good.CR) >= 0.3 && s.SetBonus == good.ViridescentVenerer
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.Get(good.EM)
+		},
+	}
+}
+
+func sucrose() {
+	priority = append(priority, good.Sucrose)
+	config[good.Sucrose] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.EM, good.ER, good.ATKP).
+			Goblet(good.EM, good.ATKP, good.AnemoP).
+			Circlet(good.EM, good.CR, good.ATKP).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.ER) >= 1.30 && s.SetBonus == good.ViridescentVenerer
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.Get(good.EM)
+		},
+	}
+}
+
+func jean() {
+	priority = append(priority, good.Jean)
+	config[good.Jean] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP).
+			Goblet(good.AnemoP).
+			Circlet(good.CR, good.CD).
+			Skip(good.DEFP).Max(1).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.ER) >= 1.60 && s.SetBonus == good.ViridescentVenerer
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			dmg := s.TotalATK()
+			dmg *= 1 + s.AllDMG + s.SkillDMG + s.Get(good.AnemoP)
+			dmg *= s.CritAverage(s.SkillCR, 0)
+			// Skill DMG
+			dmg *= 4.964
+			return dmg
+		},
+	}
+}
+
+func itto() {
+	priority = append(priority, good.AratakiItto)
+	config[good.AratakiItto] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP, good.DEFP, good.ER).
+			Goblet(good.GeoP, good.DEFP).
+			Circlet(good.CR, good.CD).
+			Skip(good.HPP, good.EM).Max(1).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			switch s.SetBonus {
+			case good.GladiatorsFinale:
+				s.NormalDMG += .35
+			case good.HuskOfOpulentDreams:
+				s.Add(good.GeoP, .06*4)
+				s.Add(good.DEFP, .06*4)
+			}
+			return s.Get(good.ER) >= 1.30
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			def := s.TotalDEF()
+
+			// Burst: ATK Bonus + C6
+			bonusATK := def * (.979)
+			bonusDmg := def * 0.35 //a4
+			// 1-Hit DMG
+			dmg := (s.TotalATK() + bonusATK) * 1.675
+
+			if t.Weapon.Key == good.RedhornStonethresher {
+				dmg += def * .40
+			}
+
+			dmg *= 1 + s.AllDMG + s.NormalDMG + s.Get(good.GeoP) + bonusDmg
+			dmg *= s.CritAverage(0, 0)
+			return dmg
+		},
+	}
+}
+
+func noelle() {
+	priority = append(priority, good.Noelle)
+	config[good.Noelle] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.ATKP, good.DEFP).
+			Goblet(good.GeoP, good.DEFP).
+			Circlet(good.CR, good.CD).
+			Skip(good.HPP, good.EM).Max(1).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			switch s.SetBonus {
+			case good.GladiatorsFinale:
+				s.NormalDMG += .35
+			case good.HuskOfOpulentDreams:
+				s.Add(good.GeoP, .06*4)
+				s.Add(good.DEFP, .06*4)
+			}
+			return s.Get(good.ER) >= 1.10
+		},
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			def := s.TotalDEF()
+
+			// Burst: ATK Bonus + C6
+			bonusATK := def * (.85 + .50)
+			// 1-Hit DMG
+			dmg := (s.TotalATK() + bonusATK) * 1.564
+
+			if t.Weapon.Key == good.RedhornStonethresher {
+				dmg += def * .40
+			}
+
+			dmg *= 1 + s.AllDMG + s.NormalDMG + s.Get(good.GeoP)
+			dmg *= s.CritAverage(0, 0)
+			return dmg
+		},
+	}
+}
+
+func gorou() {
+	priority = append(priority, good.Gorou)
+	config[good.Gorou] = &OptimizeTarget{
+		Filter: NewFilter().
+			Sands(good.DEFP, good.ER).
+			Goblet(good.DEFP, good.GeoP, good.ATKP).
+			Circlet(good.DEFP, good.CR).
+			Build(),
+		Buffs: func(t *OptimizeTarget, s *OptimizeState) bool {
+			return s.Get(good.CR) > 0.3 && s.Get(good.ER) >= 1.5
+		},
+		IgnoreEnemy: true,
+		Target: func(t *OptimizeTarget, s *OptimizeState) float32 {
+			return s.TotalDEF()
 		},
 	}
 }
