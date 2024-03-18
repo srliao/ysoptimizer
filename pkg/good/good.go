@@ -108,6 +108,20 @@ func (a *Artifact) Process() error {
 	return nil
 }
 
+func (a *Artifact) Subs() *Stats {
+	stats := Stats{}
+	relic := excel.FindReliquarySet(uint32(a.SetKey)).Codex(a.Rarity).Reliquary(a.SlotKey.EquipType())
+	for _, s := range a.Substats {
+		v := s.Value
+		if s.Key.PercentStat() {
+			v /= 100
+		}
+		v = correctAffix(affixPermutations(relic, GOODToFightProp[s.Key]), v)
+		stats.Set(s.Key, v)
+	}
+	return &stats
+}
+
 func affixPermutations(r *excel.Reliquary, prop excel.FightProp) []float32 {
 	var perm []float32
 	rolls := affixRolls(r, prop)

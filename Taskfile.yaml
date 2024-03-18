@@ -1,0 +1,9 @@
+version: '3'
+
+tasks:
+  default:
+    dir: cmd/opt
+    cmds:
+      - cmd: time -p go run . --good-file="C:\bin\GOOD-609338292.json" --genshin-data="C:\code\GenshinData"
+        platforms: [windows]
+    
