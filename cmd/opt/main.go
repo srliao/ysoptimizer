@@ -116,7 +116,7 @@ func main() {
 			a.Location = char
 		}
 
-		result := fmt.Sprintf("%.0f->%.0f", cur.Result, opt.Result)
+		result := fmt.Sprintf("%.0f->%.0f (%0.1f%%)", cur.Result, opt.Result, 100*(opt.Result-cur.Result)/cur.Result)
 		if int(opt.Result) > int(cur.Result) {
 			result = G(result)
 		} else if int(opt.Result) < int(cur.Result) {

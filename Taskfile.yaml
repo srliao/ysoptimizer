@@ -6,4 +6,6 @@ tasks:
     cmds:
       - cmd: time -p go run . --good-file="C:\bin\GOOD-609338292.json" --genshin-data="C:\code\GenshinData"
         platforms: [windows]
+      - cmd: time -p go run . --good-file="{{.HOME}}/GOOD-609338292.json" --genshin-data="{{.HOME}}/code/GenshinBetaData"
+        platforms: [darwin]
     
